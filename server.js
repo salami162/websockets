@@ -39,7 +39,7 @@ const wss = new websocket.Server({ server: server, clientTracking: true });
 // connected websocket clients
 // { PORT: LAST_UPDATED_AT }
 var connectedClients = {}
-const LIMIT = 100
+
 
 // triggered when other clients open a connection to "me" (server)
 wss.on('connection', function connection(ws) {
@@ -57,7 +57,8 @@ wss.on('connection', function connection(ws) {
     // update connectedClients
     connectedClients[jsonMessage['uuid']] = Date.now();
 
-    console.log(SERVER_LOG + 'connectedClients =' + len(connectedClients).keys());
+    console.log(SERVER_LOG + 'connectedClients =' + JSON.stringify(connectedClients));
+    
 
     // ack a message to the client after 1 sec
     setTimeout(function timeout() {
