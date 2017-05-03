@@ -2,8 +2,8 @@ var express = require('express');
 var websocket = require('ws');
 var router = express.Router();
 
-
 const wss = new websocket('wss://s1.ripple.com:443');
+
 // When receive a message from the server, log the message data, and flag
 wss.on('message', function incoming(data, flags) {
   console.log("============");
