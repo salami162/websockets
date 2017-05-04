@@ -3,14 +3,18 @@ var express = require('express')
   , _ = require('underscore');
 var router = express.Router();
 
+/**
+ * This resource file is not quite RESTFUL.
+ * It acts as both server and client.
+ * I am taking shortcuts exchange for utility functionalities
+ */
 
-// middleware that is specific to this router
 router.use(function timeLog (req, res, next) {
   console.log('Time - connections: ', Date.now());
   next();
 });
 
-// define the home page route
+// list all connected clients
 router.get('/', function (req, res) {
   var connectedClients = req.app.get('connectedClients');
   res.json({
@@ -18,6 +22,7 @@ router.get('/', function (req, res) {
   });
 });
 
+// creates a websocket connection (as a client)
 router.post('/', function (req, res) {
   var PORT_LISTEN = req.app.get('PORT_LISTEN');
   var PORT_CONNECT = req.app.get('PORT_CONNECT');
@@ -71,6 +76,7 @@ router.post('/', function (req, res) {
   res.json({"action": "reconnect"});
 });
 
+// close all connected clients (as a server)
 router.delete('/', function (req, res) {
   var connectedClients = req.app.get('connectedClients');
   _.forEach(connectedClients, function(wsc) {
