@@ -10,27 +10,34 @@ var express = require('express')
   , websocket = require('ws')
   , _ = require('underscore');
 
-// var routes_connections = require('./server/routes/connections')
-// var routes_ripple = require('./server/routes/ripple')
 
 var app = express();
-
 app.enable("jsonp callback");
 
 app.use(express.static( path.join(__dirname, 'public') ));
 app.use(bodyParser.json()); // for parsing application/json
 app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
 
-// app.use('/connections', routes_connections);
-// app.use('/ripple', routes_ripple);
+// set routes
+var routes_connections = require('./server/routes/connections');
+var routes_ripple = require('./server/routes/ripple');
+app.use('/connections', routes_connections);
+app.use('/ripple', routes_ripple);
 
 // all environments
 const PORT_LISTEN = process.env.PORT_LISTEN;
 const PORT_CONNECT = process.env.PORT_CONNECT;
+const MAX_CONNECTION = 5;
+
+app.set('PORT_LISTEN', PORT_LISTEN);
+app.set('PORT_CONNECT', PORT_CONNECT);
+app.set('MAX_CONNECTION', MAX_CONNECTION);
 
 // log consts
 const SERVER_LOG = "[Server:" + PORT_LISTEN + "] - ";
 const CLIENT_LOG = "[Client:" + PORT_LISTEN + "] - ";
+app.set('SERVER_LOG', SERVER_LOG);
+app.set('CLIENT_LOG', CLIENT_LOG);
 
 // websocket server
 const server = http.createServer(app);
@@ -38,12 +45,18 @@ const wss = new websocket.Server({ server: server, clientTracking: true });
 
 // connected websocket clients
 // { PORT: LAST_UPDATED_AT }
-var connectedClients = {}
-
+app.set('connectedClients', {});
+connectedClients = app.get('connectedClients');
 
 // triggered when other clients open a connection to "me" (server)
 wss.on('connection', function connection(ws) {
-  console.log(SERVER_LOG + 'connected');
+  totalConnections = Object.keys(connectedClients).length;
+  console.log(SERVER_LOG + 'connected. Total=' + totalConnections);
+  if (totalConnections > MAX_CONNECTION - 1) {
+    console.log(SERVER_LOG + "Maximum connections reached! Reject!");
+    ws.close();
+    return;
+  }
 
   // triggered when clients send a message to "me" (server)
   ws.on('message', function incoming(message) {
@@ -52,14 +65,19 @@ wss.on('connection', function connection(ws) {
     if (!'uuid' in jsonMessage) {
       console.log(SERVER_LOG + "Invalid message received! Reject!");
       ws.close();
+      return;
     }
 
     // update connectedClients
-    connectedClients[jsonMessage['uuid']] = Date.now();
+    if (jsonMessage['uuid'] in Object.keys(connectedClients)) {
+      console.log("Duplicated client skip");
+    } else {
+      connectedClients[jsonMessage['uuid']] = ws;
+      app.set('connectedClients', connectedClients);
+    }
 
-    console.log(SERVER_LOG + 'connectedClients =' + JSON.stringify(connectedClients));
+    console.log(SERVER_LOG + 'connectedClients = ' + Object.keys(connectedClients));
     
-
     // ack a message to the client after 1 sec
     setTimeout(function timeout() {
       try {
@@ -71,6 +89,7 @@ wss.on('connection', function connection(ws) {
       } catch (e) {
         console.log(SERVER_LOG + "Error occurred " + e);
         delete connectedClients[jsonMessage['uuid']];
+        app.set('connectedClients', connectedClients);
         ws.close();
       }
     }, 1000);
@@ -123,4 +142,3 @@ if (PORT_CONNECT) {
     }, 1000);
   });
 }
-

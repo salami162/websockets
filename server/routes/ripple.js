@@ -20,10 +20,6 @@ wss.on('message', function incoming(data, flags) {
 
 wss.on('open', function open() {
   console.log("ripple client connectioned");
-  // send the "subscribe" command to the websocket server.
-  // specify "streams" as "ledger".
-  // The "ledger" stream only sends "ledgerClosed" messages
-  // when the consensus process declares a new validated ledger.
 });
 
 wss.on('close', function close() {
@@ -36,8 +32,12 @@ router.use(function timeLog (req, res, next) {
   next();
 });
 
-// define the home page route
+// POST endpoint to "subscribe" ledger stream
 router.post('/', function (req, res) {
+  // send the "subscribe" command to the websocket server.
+  // specify "streams" as "ledger".
+  // The "ledger" stream only sends "ledgerClosed" messages
+  // when the consensus process declares a new validated ledger.
   wss.send(JSON.stringify({
     "id": 1,
     "command": "subscribe",
@@ -45,10 +45,14 @@ router.post('/', function (req, res) {
       "ledger"
     ]
   }));
-  console.log(req.body);
-  res.json(req.body);
+  console.log("Subscribe Command Sent");
+  res.json({
+    "command": "subscribe",
+    "status": "SENT"
+  });
 });
 
+// DELETE endpoint to "unsubscribe" ledger stream
 router.delete('/', function (req, res) {
   wss.send(JSON.stringify({
     "id": 6,
@@ -57,7 +61,11 @@ router.delete('/', function (req, res) {
       "ledger"
     ]
   }));
-  res.json("ack");
+  console.log("Unsubscribe Command Sent");
+  res.json({
+    "command": "unsubscribe",
+    "status": "SENT"
+  });
 });
 
 module.exports = router;
